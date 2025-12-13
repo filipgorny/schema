@@ -1,17 +1,71 @@
+import "reflect-metadata";
 import { v4 as uuidv4 } from "uuid";
 import { Property } from "./property";
 import { EntityReference } from "./entity-reference";
+import {
+  ENTITY_METADATA_KEY,
+  PROPERTIES_METADATA_KEY,
+  CHILDREN_METADATA_KEY,
+  PARENT_METADATA_KEY,
+} from "@/decorator/metadata-keys";
+import type { PropertyMetadata } from "@/decorator";
 
 export class Entity {
   public readonly id: string;
-  public name: string;
   private properties: Property[] = [];
   private children: EntityReference[] = [];
-  private parent: EntityReference | null = null;
+  private parents: EntityReference[] = [];
 
-  constructor(name: string) {
+  constructor(public readonly name: string) {
     this.id = uuidv4();
-    this.name = name;
+  }
+
+  static from(target: any, entityCache: Map<any, Entity> = new Map()): Entity {
+    // Check cache to avoid circular dependencies
+    if (entityCache.has(target)) {
+      return entityCache.get(target)!;
+    }
+
+    // Get entity name from metadata
+    const entityName: string = Reflect.getMetadata(ENTITY_METADATA_KEY, target);
+    if (!entityName) {
+      throw new Error(`Class ${target.name} is not decorated with @entity()`);
+    }
+
+    // Create entity
+    const entity = new Entity(entityName);
+
+    // Add to cache immediately to handle circular references
+    entityCache.set(target, entity);
+
+    // Get properties from metadata
+    const properties: PropertyMetadata[] =
+      Reflect.getMetadata(PROPERTIES_METADATA_KEY, target) || [];
+    properties.forEach((prop) => {
+      entity.addProperty(new Property(prop.name, prop.type));
+    });
+
+    // Get children metadata
+    const childrenMetadata: any[] =
+      Reflect.getMetadata(CHILDREN_METADATA_KEY, target) || [];
+    childrenMetadata.forEach((childMeta: any) => {
+      if (childMeta.entityClass) {
+        const childEntity = Entity.from(childMeta.entityClass, entityCache);
+        entity.addChild(childEntity);
+      }
+    });
+
+    // Get parent metadata
+    const parentMetadata: any[] =
+      Reflect.getMetadata(PARENT_METADATA_KEY, target) || [];
+    parentMetadata.forEach((parentMeta: any) => {
+      if (parentMeta.entityClass) {
+        const parentEntity = Entity.from(parentMeta.entityClass, entityCache);
+        entity.addParent(parentEntity);
+      }
+    });
+
+    return entity;
   }
 
   addProperty(property: Property): void {
@@ -39,20 +93,39 @@ export class Entity {
     return this.properties.some((prop) => prop.name === name);
   }
 
-  setParent(entity: Entity): void {
-    this.parent = new EntityReference(entity);
+  addParent(entity: Entity): void {
+    this.parents.push(new EntityReference(entity));
   }
 
-  getParent(): EntityReference | null {
-    return this.parent;
+  addParents(...entities: Entity[]): void {
+    entities.forEach((entity) =>
+      this.parents.push(new EntityReference(entity)),
+    );
   }
 
-  removeParent(): void {
-    this.parent = null;
+  getParents(): EntityReference[] {
+    return [...this.parents];
   }
 
-  hasParent(): boolean {
-    return this.parent !== null;
+  getParent(id: string): EntityReference | undefined {
+    return this.parents.find((parent) => parent.entity.id === id);
+  }
+
+  removeParent(id: string): boolean {
+    const index = this.parents.findIndex((parent) => parent.entity.id === id);
+    if (index !== -1) {
+      this.parents.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  hasParent(id: string): boolean {
+    return this.parents.some((parent) => parent.entity.id === id);
+  }
+
+  getParentsCount(): number {
+    return this.parents.length;
   }
 
   addChild(entity: Entity): void {

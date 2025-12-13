@@ -1,2 +1,3 @@
 export { define } from "./define";
-export { SchemaBuilder, EntityBuilder } from "./schema.builder";
+export { SchemaBuilder } from "./schema.builder";
+export { Schema } from "./schema/schema";

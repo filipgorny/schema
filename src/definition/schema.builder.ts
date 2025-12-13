@@ -1,12 +1,13 @@
+import "reflect-metadata";
 import { Entity } from "@/entity";
-import { Property } from "@/entity";
-import { PropertyType } from "@/entity";
-import { Collection } from "@/entity";
-import { Source } from "@/source";
+import { ClassType } from "@filipgorny/types";
+import { ENTITY_METADATA_KEY } from "@/decorator/metadata-keys";
+import { ClassHasNotEntityDefinitionError } from "@/errors";
+import { EntityBuilder } from "./entity.builder";
+import { Schema } from "./schema/schema";
 
 export class SchemaBuilder {
-  private entities: Map<string, Entity> = new Map();
-  private collections: Map<string, Collection<any>> = new Map();
+  private entities: Entity[] = [];
 
   entity(
     name: string,
@@ -16,85 +17,40 @@ export class SchemaBuilder {
     const builtEntity = builder
       ? builder(entityBuilder).build()
       : entityBuilder.build();
-    this.entities.set(name, builtEntity);
+    this.entities.push(builtEntity);
     return this;
   }
 
-  collection<T extends Entity>(
-    name: string,
-    entityName: string,
-    source: Source,
-  ): SchemaBuilder {
-    const entity = this.entities.get(entityName);
-    if (!entity) {
-      throw new Error(
-        `Entity "${entityName}" not found. Define it first with entity().`,
-      );
+  register(classType: ClassType): SchemaBuilder {
+    // Check if class has @entity() decorator
+    const entityName = Reflect.getMetadata(ENTITY_METADATA_KEY, classType);
+    if (!entityName) {
+      throw new ClassHasNotEntityDefinitionError(classType.name);
     }
-    this.collections.set(name, new Collection<T>(entity, source));
+
+    // Create entity from class
+    const entity = Entity.from(classType);
+    this.entities.push(entity);
     return this;
   }
 
   getEntity(name: string): Entity | undefined {
-    return this.entities.get(name);
+    return this.entities.find((e) => e.name === name);
   }
 
-  getCollection<T extends Entity>(name: string): Collection<T> | undefined {
-    return this.collections.get(name) as Collection<T> | undefined;
-  }
-
-  getEntities(): Map<string, Entity> {
-    return new Map(this.entities);
-  }
-
-  getCollections(): Map<string, Collection<any>> {
-    return new Map(this.collections);
+  getEntities(): Entity[] {
+    return [...this.entities];
   }
 
   hasEntity(name: string): boolean {
-    return this.entities.has(name);
+    return this.entities.some((e) => e.name === name);
   }
 
-  hasCollection(name: string): boolean {
-    return this.collections.has(name);
+  build(): SchemaBuilder {
+    return new SchemaBuilder();
   }
 
-  build() {
-    return {
-      entities: this.getEntities(),
-      collections: this.getCollections(),
-    };
-  }
-}
-
-export class EntityBuilder {
-  private entity: Entity;
-
-  constructor(name: string) {
-    this.entity = new Entity(name);
-  }
-
-  property(name: string, type: PropertyType): EntityBuilder {
-    this.entity.addProperty(new Property(name, type));
-    return this;
-  }
-
-  child(name: string): EntityBuilder {
-    const childBuilder = new EntityBuilder(name);
-    this.entity.addChild(childBuilder.entity);
-    return childBuilder;
-  }
-
-  children(...entities: Entity[]): EntityBuilder {
-    this.entity.addChildren(...entities);
-    return this;
-  }
-
-  getEntity(): Entity {
-    return this.entity;
-  }
-
-  build(): Entity {
-    return this.entity;
+  getSchema(): Schema {
+    return new Schema(this.getEntities());
   }
 }

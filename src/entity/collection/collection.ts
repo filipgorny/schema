@@ -1,4 +1,4 @@
-import { Entity } from "./entity";
+import { Entity } from "../entity";
 import { Source } from "@/source";
 
 export class Collection<T extends Entity> implements Iterable<T> {
