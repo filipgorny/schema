@@ -1,7 +1,7 @@
 {
-  "name": "@filipgorny/collection",
+  "name": "@filipgorny/schema",
   "version": "0.0.1",
-  "description": "Collection utilities",
+  "description": "Schema utilities",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -15,7 +15,7 @@
     "test": "jest"
   },
   "keywords": [
-    "collection",
+    "schema",
     "utilities"
   ],
   "author": "Filip Gorny",
@@ -23,7 +23,7 @@
   "private": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/filipgorny/collection.git"
+    "url": "git@github.com:filipgorny/schema.git"
   },
   "publishConfig": {
     "access": "public"
