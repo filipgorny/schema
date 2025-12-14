@@ -33,13 +33,16 @@ export class SqlitePersistence implements Persistence {
   private async createTableForEntity(entity: Entity): Promise<void> {
     const columns: string[] = [];
 
-    // Add id as primary key
-    columns.push("id TEXT PRIMARY KEY");
-
     // Add property columns
     for (const property of entity.getProperties()) {
       const sqlType = this.mapPropertyTypeToSql(property.type);
-      columns.push(`${property.name} ${sqlType}`);
+
+      // If this is the id property, make it the primary key
+      if (property.name === "id") {
+        columns.push(`${property.name} ${sqlType} PRIMARY KEY`);
+      } else {
+        columns.push(`${property.name} ${sqlType}`);
+      }
     }
 
     const createTableSql = `CREATE TABLE IF NOT EXISTS ${entity.name} (${columns.join(", ")})`;
@@ -70,7 +73,7 @@ export class SqlitePersistence implements Persistence {
       case PropertyType.BOOLEAN:
         return "INTEGER"; // SQLite uses 0/1 for boolean
       case PropertyType.DATE:
-        return "TEXT"; // Store as ISO string
+        return "INTEGER"; // Store as Unix timestamp in milliseconds
       case PropertyType.ARRAY:
       case PropertyType.OBJECT:
         return "TEXT"; // Store as JSON
@@ -87,7 +90,8 @@ export class SqlitePersistence implements Persistence {
       throw new DatabaseNotInitializedError();
     }
     const stmt = this.db.prepare(sql);
-    return stmt.all(...params);
+    const result = stmt.all(...params);
+    return result;
   }
 
   async execute(sql: string, params: any[] = []): Promise<void> {

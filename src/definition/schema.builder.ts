@@ -59,7 +59,7 @@ export class SchemaBuilder {
   }
 
   build(): SchemaBuilder {
-    return new SchemaBuilder();
+    return this;
   }
 
   getSchema(): Schema {

@@ -61,9 +61,9 @@ export class Database {
     const values: any = { id: value.id };
     for (const property of entity.getProperties()) {
       let val = value[property.name];
-      // Convert Date to ISO string for SQLite
+      // Convert Date to Unix timestamp (milliseconds) for SQLite
       if (val instanceof Date) {
-        val = val.toISOString();
+        val = val.getTime();
       }
       values[property.name] = val;
     }
@@ -89,6 +89,38 @@ export class Database {
     const placeholders = fields.map(() => "?").join(", ");
     const sql = `INSERT OR REPLACE INTO ${entityName} (${fields.join(", ")}) VALUES (${placeholders})`;
     const params = fields.map((f) => values[f]);
+
+    await this.persistence.execute(sql, params);
+  }
+
+  async delete(value: any): Promise<void> {
+    const classType = value.constructor;
+
+    // Try to get entity name from @entity() decorator first
+    let entityName = Reflect.getMetadata(ENTITY_METADATA_KEY, classType);
+
+    // If no decorator, try to find entity in schema by classType
+    if (!entityName) {
+      const entityByClass = this.schema
+        .getEntities()
+        .find((e) => e.classType === classType);
+      if (entityByClass) {
+        entityName = entityByClass.name;
+      }
+    }
+
+    if (!entityName) {
+      throw new InvalidEntityInstanceError(value);
+    }
+
+    const entity = this.schema.getEntity(entityName);
+    if (!entity) {
+      throw new EntityNotFoundError(entityName);
+    }
+
+    // Generate DELETE SQL
+    const sql = `DELETE FROM ${entityName} WHERE id = ?`;
+    const params = [value.id];
 
     await this.persistence.execute(sql, params);
   }

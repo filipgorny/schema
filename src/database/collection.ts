@@ -1,4 +1,4 @@
-import { Entity } from "@/entity";
+import { Entity, PropertyType } from "@/entity";
 import { EntityProxy } from "./entity-proxy";
 import type { Database } from "./database";
 
@@ -21,7 +21,23 @@ export class Collection<T> implements Iterable<T> {
     }
 
     const instance = new this.entity.classType();
-    Object.assign(instance, data);
+
+    // Convert property values based on their types
+    for (const property of this.entity.getProperties()) {
+      const value = data[property.name];
+
+      if (value === null || value === undefined) {
+        instance[property.name] = value;
+        continue;
+      }
+
+      // Convert DATE properties from ISO string/timestamp to Date object
+      if (property.type === PropertyType.DATE) {
+        instance[property.name] = new Date(value);
+      } else {
+        instance[property.name] = value;
+      }
+    }
 
     // Wrap with proxy for lazy loading if database is available
     if (this.database) {
