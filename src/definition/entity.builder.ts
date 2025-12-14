@@ -3,8 +3,8 @@ import { Entity, Property, PropertyType } from "@/entity";
 export class EntityBuilder {
   private entity: Entity;
 
-  constructor(name: string) {
-    this.entity = new Entity(name);
+  constructor(classType: any, name?: string) {
+    this.entity = new Entity(classType, name);
   }
 
   property(name: string, type: PropertyType): EntityBuilder {
@@ -18,6 +18,11 @@ export class EntityBuilder {
 
   children(...entities: Entity[]): EntityBuilder {
     this.entity.addChildren(...entities);
+    return this;
+  }
+
+  classType(type: any): EntityBuilder {
+    (this.entity as any).classType = type;
     return this;
   }
 

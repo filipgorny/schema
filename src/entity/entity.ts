@@ -1,23 +1,33 @@
 import "reflect-metadata";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 import { Property } from "./property";
 import { EntityReference } from "./entity-reference";
+import { Relation } from "./relation";
 import {
   ENTITY_METADATA_KEY,
   PROPERTIES_METADATA_KEY,
-  CHILDREN_METADATA_KEY,
   PARENT_METADATA_KEY,
+  CHILDREN_METADATA_KEY,
 } from "@/decorator/metadata-keys";
 import type { PropertyMetadata } from "@/decorator";
+import { ClassHasNotEntityDefinitionError } from "@/errors";
+import { ClassType } from "@filipgorny/types";
 
 export class Entity {
   public readonly id: string;
+  public readonly name: string;
   private properties: Property[] = [];
   private children: EntityReference[] = [];
   private parents: EntityReference[] = [];
+  private relations: Relation[] = [];
 
-  constructor(public readonly name: string) {
-    this.id = uuidv4();
+  constructor(
+    public readonly classType: ClassType,
+    name?: string,
+  ) {
+    this.id = randomUUID();
+    // If name not provided, derive it from class name
+    this.name = name || classType.name;
   }
 
   static from(target: any, entityCache: Map<any, Entity> = new Map()): Entity {
@@ -29,11 +39,11 @@ export class Entity {
     // Get entity name from metadata
     const entityName: string = Reflect.getMetadata(ENTITY_METADATA_KEY, target);
     if (!entityName) {
-      throw new Error(`Class ${target.name} is not decorated with @entity()`);
+      throw new ClassHasNotEntityDefinitionError(target);
     }
 
-    // Create entity
-    const entity = new Entity(entityName);
+    // Create entity with classType first, name second
+    const entity = new Entity(target, entityName);
 
     // Add to cache immediately to handle circular references
     entityCache.set(target, entity);
@@ -45,25 +55,8 @@ export class Entity {
       entity.addProperty(new Property(prop.name, prop.type));
     });
 
-    // Get children metadata
-    const childrenMetadata: any[] =
-      Reflect.getMetadata(CHILDREN_METADATA_KEY, target) || [];
-    childrenMetadata.forEach((childMeta: any) => {
-      if (childMeta.entityClass) {
-        const childEntity = Entity.from(childMeta.entityClass, entityCache);
-        entity.addChild(childEntity);
-      }
-    });
-
-    // Get parent metadata
-    const parentMetadata: any[] =
-      Reflect.getMetadata(PARENT_METADATA_KEY, target) || [];
-    parentMetadata.forEach((parentMeta: any) => {
-      if (parentMeta.entityClass) {
-        const parentEntity = Entity.from(parentMeta.entityClass, entityCache);
-        entity.addParent(parentEntity);
-      }
-    });
+    // Note: Parent/Children relationships are resolved later in SchemaBuilder.getSchema()
+    // after all entities are registered, using getParentMetadata() and getChildrenMetadata()
 
     return entity;
   }
@@ -161,5 +154,33 @@ export class Entity {
 
   getChildrenCount(): number {
     return this.children.length;
+  }
+
+  addRelation(relation: Relation): void {
+    this.relations.push(relation);
+  }
+
+  getRelations(): Relation[] {
+    return [...this.relations];
+  }
+
+  getRelation(propertyName: string): Relation | undefined {
+    return this.relations.find((r) => r.propertyName === propertyName);
+  }
+
+  /**
+   * Get parent metadata from the class type
+   */
+  getParentMetadata(): any[] {
+    if (!this.classType) return [];
+    return Reflect.getMetadata(PARENT_METADATA_KEY, this.classType) || [];
+  }
+
+  /**
+   * Get children metadata from the class type
+   */
+  getChildrenMetadata(): any[] {
+    if (!this.classType) return [];
+    return Reflect.getMetadata(CHILDREN_METADATA_KEY, this.classType) || [];
   }
 }

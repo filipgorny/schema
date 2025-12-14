@@ -2,10 +2,11 @@ export {
   Entity,
   Property,
   PropertyType,
-  Collection,
   EntityReference,
   Children,
   Parent,
+  Relation,
+  RelationType,
 } from "@/entity";
 export { define, SchemaBuilder, Schema } from "@/definition";
 export { Source, ArraySource } from "@/source";
@@ -15,4 +16,19 @@ export type {
   ChildrenMetadata,
   ParentMetadata,
 } from "@/decorator";
-export { ClassHasNotEntityDefinitionError } from "@/errors";
+export {
+  ClassHasNotEntityDefinitionError,
+  InvalidEntityInstanceError,
+} from "@/errors";
+export {
+  Query,
+  Filter,
+  FilterOperator,
+  LogicOperator,
+  LogicType,
+} from "@/query";
+export { FilterTranslator, QueryTranslator } from "@/sql";
+export type { SqlResult } from "@/sql";
+export { Database, Collection } from "@/database";
+export { Persistence } from "@/persistence/persistence";
+export { SqlitePersistence } from "@/persistence/sqlite.persistence";

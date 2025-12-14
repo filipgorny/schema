@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { CHILDREN_METADATA_KEY } from "./metadata-keys";
 import { Children } from "@/entity/children";
+import { InvalidChildrenPropertyTypeError } from "@/errors";
 
 export interface ChildrenMetadata {
   propertyKey: string;
@@ -15,13 +16,7 @@ export function children(): PropertyDecorator {
     // Get the design type from TypeScript metadata
     const designType = Reflect.getMetadata("design:type", target, propertyKey);
 
-    // Validate that the property is of type Children
-    if (designType !== Children) {
-      throw new Error(
-        `Property ${propertyKey.toString()} must be of type Children<EntityClass>`,
-      );
-    }
-
+    // Store children metadata (no validation - users can use actual entity array types)
     childrenList.push({
       propertyKey: propertyKey.toString(),
       entityClass: designType,

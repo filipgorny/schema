@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { PARENT_METADATA_KEY } from "./metadata-keys";
 import { Parent } from "@/entity/parent";
+import { InvalidParentPropertyTypeError } from "@/errors";
 
 export interface ParentMetadata {
   propertyKey: string;
@@ -15,13 +16,7 @@ export function parent(): PropertyDecorator {
     // Get the design type from TypeScript metadata
     const designType = Reflect.getMetadata("design:type", target, propertyKey);
 
-    // Validate that the property is of type Parent
-    if (designType !== Parent) {
-      throw new Error(
-        `Property ${propertyKey.toString()} must be of type Parent<EntityClass>`,
-      );
-    }
-
+    // Store parent metadata (no validation - users can use actual entity types)
     parentList.push({
       propertyKey: propertyKey.toString(),
       entityClass: designType,
