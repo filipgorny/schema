@@ -36,8 +36,9 @@ export class SqlitePersistence implements Persistence {
     // Add id as primary key
     columns.push("id TEXT PRIMARY KEY");
 
-    // Add property columns
+    // Add property columns (skip id as it's already added as primary key)
     for (const property of entity.getProperties()) {
+      if (property.name === "id") continue;
       const sqlType = this.mapPropertyTypeToSql(property.type);
       columns.push(`${property.name} ${sqlType}`);
     }

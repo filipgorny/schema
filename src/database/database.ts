@@ -93,6 +93,39 @@ export class Database {
     await this.persistence.execute(sql, params);
   }
 
+  async delete(value: any): Promise<void> {
+    const classType = value.constructor;
+
+    // Try to get entity name from @entity() decorator first
+    let entityName = Reflect.getMetadata(ENTITY_METADATA_KEY, classType);
+
+    // If no decorator, try to find entity in schema by classType
+    if (!entityName) {
+      const entityByClass = this.schema
+        .getEntities()
+        .find((e) => e.classType === classType);
+      if (entityByClass) {
+        entityName = entityByClass.name;
+      }
+    }
+
+    if (!entityName) {
+      throw new InvalidEntityInstanceError(value);
+    }
+
+    const entity = this.schema.getEntity(entityName);
+    if (!entity) {
+      throw new EntityNotFoundError(entityName);
+    }
+
+    if (!value.id) {
+      throw new Error("Cannot delete entity without id");
+    }
+
+    const sql = `DELETE FROM ${entityName} WHERE id = ?`;
+    await this.persistence.execute(sql, [value.id]);
+  }
+
   async close(): Promise<void> {
     await this.persistence.close();
   }
