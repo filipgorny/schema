@@ -84,6 +84,24 @@ export class EntityProxy {
 
     return new Proxy(instance as any, {
       get(target: any, prop: string | symbol, receiver: any) {
+        // Handle toJSON for JSON serialization (e.g., by Express)
+        if (prop === "toJSON") {
+          return () => {
+            // Extract only the plain data properties, excluding circular references
+            const plainObject: any = {};
+            for (const key in target) {
+              if (target.hasOwnProperty(key)) {
+                const value = target[key];
+                // Skip functions and undefined values
+                if (typeof value !== "function" && value !== undefined) {
+                  plainObject[key] = value;
+                }
+              }
+            }
+            return plainObject;
+          };
+        }
+
         // Get the original value
         const value = Reflect.get(target, prop, receiver);
 

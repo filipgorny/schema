@@ -61,9 +61,9 @@ export class Database {
     const values: any = { id: value.id };
     for (const property of entity.getProperties()) {
       let val = value[property.name];
-      // Convert Date to ISO string for SQLite
+      // Convert Date to Unix timestamp (milliseconds) for SQLite
       if (val instanceof Date) {
-        val = val.toISOString();
+        val = val.getTime();
       }
       values[property.name] = val;
     }

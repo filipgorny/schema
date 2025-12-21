@@ -1,6 +1,6 @@
 {
   "name": "@filipgorny/schema",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Schema utilities",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

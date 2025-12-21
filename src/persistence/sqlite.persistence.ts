@@ -71,7 +71,7 @@ export class SqlitePersistence implements Persistence {
       case PropertyType.BOOLEAN:
         return "INTEGER"; // SQLite uses 0/1 for boolean
       case PropertyType.DATE:
-        return "TEXT"; // Store as ISO string
+        return "INTEGER"; // Store as Unix timestamp in milliseconds
       case PropertyType.ARRAY:
       case PropertyType.OBJECT:
         return "TEXT"; // Store as JSON
@@ -88,7 +88,8 @@ export class SqlitePersistence implements Persistence {
       throw new DatabaseNotInitializedError();
     }
     const stmt = this.db.prepare(sql);
-    return stmt.all(...params);
+    const result = stmt.all(...params);
+    return result;
   }
 
   async execute(sql: string, params: any[] = []): Promise<void> {
